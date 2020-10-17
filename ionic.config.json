@@ -1,0 +1,7 @@
+{
+  "name": "MobileIonic",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}
