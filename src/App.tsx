@@ -1,8 +1,8 @@
 import React from 'react';
-import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import Home from './pages/Home';
+import {Redirect, Route} from 'react-router-dom';
+import {IonApp, IonRouterOutlet} from '@ionic/react';
+import {IonReactRouter} from '@ionic/react-router';
+import {GameList} from './pages';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -22,16 +22,22 @@ import '@ionic/react/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
+import {GameProvider} from "./pages/GameProvider";
+import GameEdit from "./pages/GameEdit";
 
 const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonRouterOutlet>
-        <Route path="/home" component={Home} exact={true} />
-        <Route exact path="/" render={() => <Redirect to="/home" />} />
-      </IonRouterOutlet>
-    </IonReactRouter>
-  </IonApp>
+    <IonApp>
+        <GameProvider>
+            <IonReactRouter>
+                <IonRouterOutlet>
+                    <Route exact path="/games" component={GameList}/>
+                    <Route exact path="/game" component={GameEdit}/>
+                    <Route exact path="/game/:id" component={GameEdit}/>
+                    <Route exact path="/" render={() => <Redirect to="/games"/>}/>
+                </IonRouterOutlet>
+            </IonReactRouter>
+        </GameProvider>
+    </IonApp>
 );
 
 export default App;
