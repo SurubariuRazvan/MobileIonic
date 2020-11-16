@@ -8,16 +8,16 @@ import {
     IonItemSliding,
 } from '@ionic/react';
 import {GameProps} from './GameProps';
-import Collapsible from "../core/Collapsible";
+import Collapsible from "./Collapsible";
 
 interface GamePropsExt extends GameProps {
-    onEdit: (id?: number) => void;
-    onDelete: (id?: number) => void;
+    onEdit: (_id?: number) => void;
+    onDelete: (_id?: number) => void;
 }
 
-const Game: React.FC<GamePropsExt> = ({id, appid, name, developer, positive, negative, owners, price, onEdit, onDelete}) => {
+const Game: React.FC<GamePropsExt> = ({_id, appid, name, developer, positive, negative, owners, price, onEdit, onDelete}) => {
     return (
-        <IonItemSliding key={id} id={String(id)}>
+        <IonItemSliding key={_id} id={String(_id)}>
             <IonItem>
                 <Collapsible>
                     <IonCardTitle>
@@ -35,12 +35,12 @@ const Game: React.FC<GamePropsExt> = ({id, appid, name, developer, positive, neg
             </IonItem>
 
             <IonItemOptions side="start">
-                <IonItemOption color="primary" expandable onClick={() => onEdit(id)}>
+                <IonItemOption color="primary" expandable onClick={() => onEdit(_id)}>
                     Update
                 </IonItemOption>
             </IonItemOptions>
             <IonItemOptions side="end">
-                <IonItemOption color="danger" expandable onClick={() => onDelete(id)}>
+                <IonItemOption color="danger" expandable onClick={() => onDelete(_id)}>
                     Delete
                 </IonItemOption>
             </IonItemOptions>

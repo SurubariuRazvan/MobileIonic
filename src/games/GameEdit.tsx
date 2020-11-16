@@ -21,12 +21,12 @@ import {GameProps} from './GameProps';
 const log = getLogger('GameEdit');
 
 interface GameEditProps extends RouteComponentProps<{
-    id?: string;
+    _id?: string;
 }> {
 }
 
 const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
-    const {games, saving, savingError, saveGame} = useContext(GameContext);
+    const {games, saving, savingError, _saveGame} = useContext(GameContext);
     const [appid, setAppid] = useState(0);
     const [name, setName] = useState('');
     const [developer, setDeveloper] = useState('');
@@ -37,8 +37,8 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
     const [game, setGame] = useState<GameProps>();
     useEffect(() => {
         log('useEffect');
-        const routeId = match.params.id ? Number(match.params.id) : -1;
-        const game = games?.find(it => it.id === routeId);
+        const routeId = match.params._id ? Number(match.params._id) : -1;
+        const game = games?.find(it => it._id === routeId);
         setGame(game);
         if (game) {
             game.appid && setAppid(game.appid);
@@ -49,7 +49,7 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
             game.owners && setOwners(game.owners);
             game.price && setPrice(game.price);
         }
-    }, [match.params.id, games]);
+    }, [match.params._id, games]);
     const handleSave = () => {
         const editedGame = game ? {...game, appid, name, developer, positive, negative, owners, price} : {
             appid,
@@ -60,17 +60,17 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
             owners,
             price
         };
-        saveGame && saveGame(editedGame).then(() => history.goBack());
+        _saveGame && _saveGame(editedGame).then(() => history.goBack());
     };
     log('render');
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
-                    <IonTitle>{match.params.id ? "Edit" : "Save"}</IonTitle>
+                    <IonTitle>{match.params._id ? "Edit" : "Save"}</IonTitle>
                     <IonButtons slot="end">
                         <IonButton onClick={handleSave}>
-                            {match.params.id ? "Update" : "Save"}
+                            {match.params._id ? "Update" : "Save"}
                         </IonButton>
                     </IonButtons>
                 </IonToolbar>

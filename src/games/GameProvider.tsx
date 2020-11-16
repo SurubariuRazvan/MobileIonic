@@ -1,8 +1,10 @@
-import React, {useCallback, useEffect, useReducer} from 'react';
+import React, {useCallback, useContext, useEffect, useReducer} from 'react';
 import PropTypes from 'prop-types';
 import {getLogger} from '../core';
 import {GameProps} from './GameProps';
-import {createGame, getGames, newWebSocket, updateGame} from './GameApi';
+import {createGame, deleteGame, getGames, newWebSocket, updateGame} from './GameApi';
+import {AuthContext} from "../auth";
+import {Storage} from "@capacitor/core";
 
 const log = getLogger('GameProvider');
 
@@ -15,10 +17,10 @@ export interface GamesState {
     fetchingError?: Error | null,
     saving: boolean,
     savingError?: Error | null,
-    saveGame?: SaveGameFn,
+    _saveGame?: SaveGameFn,
     deleting: boolean,
     deletingError?: Error | null,
-    deleteGame?: DeleteGameFn,
+    _deleteGame?: DeleteGameFn,
 }
 
 interface ActionProps {
@@ -56,7 +58,7 @@ const reducer: (state: GamesState, action: ActionProps) => GamesState =
             case SAVE_GAMES_SUCCEEDED: {
                 const games = [...(state.games || [])];
                 const game = payload.game;
-                const index = games.findIndex(it => it.id === game.id);
+                const index = games.findIndex(it => it._id === game._id);
                 if (index === -1) {
                     games.splice(games.length, 0, game);
                 } else {
@@ -71,7 +73,7 @@ const reducer: (state: GamesState, action: ActionProps) => GamesState =
             case DELETE_GAME_SUCCEEDED: {
                 const games = [...(state.games || [])];
                 const game = payload.game;
-                const index = games.findIndex(it => it.id === game.id);
+                const index = games.findIndex(it => it._id === game._id);
                 if (index !== -1) {
                     games.splice(index, 1);
                 }
@@ -91,13 +93,24 @@ interface GameProviderProps {
 }
 
 export const GameProvider: React.FC<GameProviderProps> = ({children}) => {
+    const {token, _id} = useContext(AuthContext);
     const [state, dispatch] = useReducer(reducer, initialState);
     const {games, fetching, fetchingError, saving, savingError, deleting, deletingError} = state;
-    useEffect(getGamesEffect, []);
-    useEffect(wsEffect, []);
-    const saveGame = useCallback<SaveGameFn>(saveGameCallback, []);
-    const deleteGame = useCallback<DeleteGameFn>(deleteGameCallback, []);
-    const value = {games, fetching, fetchingError, saving, savingError, saveGame, deleting, deletingError, deleteGame};
+    useEffect(getGamesEffect, [token]);
+    useEffect(wsEffect, [token]);
+    const _saveGame = useCallback<SaveGameFn>(saveGameCallback, [token]);
+    const _deleteGame = useCallback<DeleteGameFn>(deleteGameCallback, [token]);
+    const value = {
+        games,
+        fetching,
+        fetchingError,
+        saving,
+        savingError,
+        _saveGame,
+        deleting,
+        deletingError,
+        _deleteGame
+    };
     log('returns');
     return (
         <GameContext.Provider value={value}>
@@ -113,17 +126,34 @@ export const GameProvider: React.FC<GameProviderProps> = ({children}) => {
         }
 
         async function fetchGames() {
+            if (!token?.trim()) {
+                return;
+            }
             try {
                 log('fetchGames started');
                 dispatch({type: FETCH_GAMES_STARTED});
-                const games = await getGames();
+                const games = await getGames(token);
                 log('fetchGames succeeded');
                 if (!canceled) {
                     dispatch({type: FETCH_GAMES_SUCCEEDED, payload: {games}});
                 }
             } catch (error) {
                 log('fetchGames failed');
-                dispatch({type: FETCH_GAMES_FAILED, payload: {error}});
+                alert("OFFLINE!");
+                const storageGames: any[] = [];
+                await Storage.keys().then(function (allKeys) {
+                    allKeys.keys.forEach((key) => {
+                        Storage.get({key}).then(function (it) {
+                            try {
+                                const object = JSON.parse(it.value);
+                                if (String(object.userId) === String(_id))
+                                    storageGames.push(object);
+                            } catch (e) {
+                            }
+                        });
+                    })
+                });
+                dispatch({type: FETCH_GAMES_SUCCEEDED, payload: {games: storageGames}});
             }
         }
     }
@@ -132,12 +162,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({children}) => {
         try {
             log('saveGame started');
             dispatch({type: SAVE_GAMES_STARTED});
-            const savedGame = await (game.id ? updateGame(game) : createGame(game));
+            const savedGame = await (game._id ? updateGame(token, game) : createGame(token, game));
             log('saveGame succeeded');
             dispatch({type: SAVE_GAMES_SUCCEEDED, payload: {game: savedGame}});
         } catch (error) {
             log('saveGame failed');
-            dispatch({type: SAVE_GAME_FAILED, payload: {error}});
+            alert("OFFLINE!");
+            game._id = game._id ? game._id : Date.now()
+            await Storage.set({
+                key: String(game._id),
+                value: JSON.stringify(game)
+            });
+            dispatch({type: SAVE_GAMES_SUCCEEDED, payload: {game}});
         }
     }
 
@@ -145,37 +181,44 @@ export const GameProvider: React.FC<GameProviderProps> = ({children}) => {
         try {
             log('deleteGame started');
             dispatch({type: DELETE_GAME_STARTED});
-            await deleteGame(game)
+            const deletedGame = await deleteGame(token, game);
             log('saveGame succeeded');
-            dispatch({type: DELETE_GAME_SUCCEEDED});
+            dispatch({type: DELETE_GAME_SUCCEEDED, payload: {game: deletedGame}});
         } catch (error) {
             log('deleteGame failed');
-            dispatch({type: DELETE_GAME_FAILED, payload: {error}});
+            alert("OFFLINE!");
+            await Storage.remove({
+                key: String(game._id)
+            });
+            dispatch({type: DELETE_GAME_SUCCEEDED, payload: {game}});
         }
     }
 
     function wsEffect() {
         let canceled = false;
         log('wsEffect - connecting');
-        const closeWebSocket = newWebSocket((message) => {
-            if (canceled) {
-                return;
-            }
-            const {event, payload: {game}} = message;
-            log(`ws message, game ${event}`);
-            if (event === 'created' || event === 'updated') {
-                dispatch({type: SAVE_GAMES_SUCCEEDED, payload: {game}});
-            }
+        let closeWebSocket: () => void;
+        if (token?.trim()) {
+            closeWebSocket = newWebSocket(token, message => {
+                if (canceled) {
+                    return;
+                }
+                const {event, payload: game} = message;
+                console.log(JSON.stringify(message));
+                log(`ws message, game ${event}`);
+                if (event === 'created' || event === 'updated') {
+                    dispatch({type: SAVE_GAMES_SUCCEEDED, payload: {game}});
+                }
 
-            if (event === "deleted") {
-                dispatch({type: DELETE_GAME_SUCCEEDED, payload: {game}});
-            }
-        });
+                if (event === "deleted") {
+                    dispatch({type: DELETE_GAME_SUCCEEDED, payload: {game}});
+                }
+            });
+        }
         return () => {
             log('wsEffect - disconnecting');
             canceled = true;
-            // @ts-ignore
-            closeWebSocket();
+            closeWebSocket?.();
         }
     }
 };

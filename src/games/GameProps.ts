@@ -1,5 +1,5 @@
 export interface GameProps {
-    id?: number;
+    _id?: number;
     appid?: number;
     name: string;
     developer?: string;
