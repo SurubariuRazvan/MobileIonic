@@ -7,4 +7,7 @@ export interface GameProps {
     negative?: number;
     owners?: string;
     price?: number;
+    userId?: number;
+    status: number;
+    version: number;
 }

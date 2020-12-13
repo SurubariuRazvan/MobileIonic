@@ -70,8 +70,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
             token: "",
         });
         (async () => {
-            await Storage.remove({key: "user"});
-            await Storage.remove({key: "_id"});
+            // await Storage.remove({key: "user"});
+            // await Storage.remove({key: "_id"});
+            await Storage.clear();
         })();
     }
 

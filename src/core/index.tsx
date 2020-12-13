@@ -1,5 +1,3 @@
-export {default as Collapsible} from '../games/Collapsible';
-
 export const baseUrl = 'jderu.cf:3000';
 
 export const getLogger: (tag: string) => (...args: any) => void =

@@ -15,7 +15,7 @@ interface GamePropsExt extends GameProps {
     onDelete: (_id?: number) => void;
 }
 
-const Game: React.FC<GamePropsExt> = ({_id, appid, name, developer, positive, negative, owners, price, onEdit, onDelete}) => {
+const Game: React.FC<GamePropsExt> = ({_id, appid, name, developer, positive, negative, owners, price, version, status, onEdit, onDelete}) => {
     return (
         <IonItemSliding key={_id} id={String(_id)}>
             <IonItem>
