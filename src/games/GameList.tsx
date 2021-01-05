@@ -149,6 +149,8 @@ const GameList: React.FC<RouteComponentProps> = ({history}) => {
                         {games.map(({
                                         _id,
                                         appid,
+                                        photo,
+                                        location,
                                         name,
                                         developer,
                                         positive,
@@ -158,8 +160,8 @@ const GameList: React.FC<RouteComponentProps> = ({history}) => {
                                         version,
                                         status
                                     }) =>
-                            <Game key={_id} _id={_id} appid={appid} name={name} developer={developer}
-                                  positive={positive}
+                            <Game key={_id} _id={_id} appid={appid} photo={photo} location={location} name={name}
+                                  developer={developer} positive={positive}
                                   negative={negative} owners={owners} price={price} version={version} status={status}
                                   onEdit={_id => history.push(`/game/${_id}`)}
                                   onDelete={_id => _deleteGame && _deleteGame({

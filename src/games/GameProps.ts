@@ -1,6 +1,10 @@
+import {MyLocation, Photo} from "./GameEdit";
+
 export interface GameProps {
     _id?: number;
     appid?: number;
+    photo?: Photo;
+    location?: MyLocation;
     name: string;
     developer?: string;
     positive?: number;

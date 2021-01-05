@@ -4,7 +4,7 @@ import {GameProps} from './GameProps';
 import {Plugins} from "@capacitor/core";
 
 const {Storage} = Plugins;
-const gameUrl = `https://${baseUrl}/api/games`;
+const gameUrl = `http://${baseUrl}/api/games`;
 
 export const getGames: (token: string, owners: string, partialName: string, offset: number, size: number) => Promise<GameProps[]> = (token, owners: string, partialName: string, offset, size) => {
     const result = axios.get(`${gameUrl}?owners=${owners}&partialName=${partialName}&offset=${offset}&size=${size}`, authConfig(token));
@@ -73,7 +73,7 @@ interface MessageData {
 const log = getLogger('ws');
 
 export const newWebSocket = (token: string, onMessage: (data: MessageData) => void) => {
-    const ws = new WebSocket(`wss://${baseUrl}`)
+    const ws = new WebSocket(`ws://${baseUrl}`)
     ws.onopen = () => {
         log('web socket onopen');
         ws.send(JSON.stringify({type: 'authorization', payload: {token}}));

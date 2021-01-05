@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {baseUrl, config, withLogs} from '../core';
 
-const authUrl = `https://${baseUrl}/api/auth/login`;
+const authUrl = `http://${baseUrl}/api/auth/login`;
 
 export interface AuthProps {
     token: string;

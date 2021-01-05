@@ -11,14 +11,22 @@ import {
     IonLoading,
     IonPage,
     IonTitle,
-    IonToolbar
+    IonToolbar,
+    IonFab,
+    IonFabButton, IonIcon, IonActionSheet
 } from '@ionic/react';
+
+import {useCamera} from '@ionic/react-hooks/camera';
+import {CameraPhoto, CameraResultType, CameraSource, FilesystemDirectory, Geolocation} from '@capacitor/core';
+import {base64FromPath, useFilesystem} from '@ionic/react-hooks/filesystem';
 import {getLogger} from '../core';
 import {GameContext} from './GameProvider';
 import {RouteComponentProps} from 'react-router';
 import {GameProps} from './GameProps';
 import {useNetwork} from "./useNetwork";
 import {AuthContext} from "../auth";
+import {camera, close, trash} from "ionicons/icons";
+import {MyMap} from "../components/MyMap";
 
 const log = getLogger('GameEdit');
 
@@ -27,12 +35,22 @@ interface GameEditProps extends RouteComponentProps<{
 }> {
 }
 
+export interface Photo {
+    photo: string;
+}
+
+export interface MyLocation {
+    lat?: number;
+    lng?: number;
+}
+
 const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
     const {games, saving, savingError, _saveGame, oldGame, _getGameServer, _deleteGame} = useContext(GameContext);
     const {networkStatus} = useNetwork();
     const {_id} = useContext(AuthContext);
 
     const [appid, setAppid] = useState(0);
+    const [photo, setPhoto] = useState<Photo>();
     const [name, setName] = useState('');
     const [developer, setDeveloper] = useState('');
     const [positive, setPositive] = useState(0);
@@ -43,6 +61,36 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
     const [game1, setGame1] = useState<GameProps>();
 
     const [userId] = useState(Number(_id));
+
+    const {getPhoto} = useCamera();
+
+    const [location, setLocation] = useState<MyLocation>({lat: 0, lng: 0});
+
+    if (!match.params._id)
+        Geolocation.getCurrentPosition().then(position => {
+            setLocation({lat: position.coords.latitude, lng: position.coords.longitude});
+            console.log(JSON.stringify(location));
+        }).catch((error) => error);
+
+    const takePhoto = async () => {
+        const cameraPhoto = await getPhoto({
+            resultType: CameraResultType.Uri,
+            source: CameraSource.Camera,
+            quality: 100
+        });
+        const savedFileImage = await savePicture(cameraPhoto);
+        setPhoto(savedFileImage);
+    };
+
+    const savePicture = async (photo: CameraPhoto): Promise<Photo> => {
+        return {
+            photo: await base64FromPath(photo.webPath!)
+        };
+    };
+
+    const deletePhoto = async () => {
+        setPhoto(undefined);
+    };
 
     useEffect(() => {
         log('useEffect');
@@ -58,6 +106,8 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
             game.negative && setNegative(game.negative);
             game.owners && setOwners(game.owners);
             game.price && setPrice(game.price);
+            game.photo && setPhoto(game.photo);
+            game.location && setLocation(game.location);
             _getGameServer?.(routeId, game);
         }
     }, [match.params._id, games, _getGameServer]);
@@ -78,9 +128,11 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
             owners,
             price,
             userId,
+            photo,
+            location,
             status: 0,
             version: game0.version ? game0.version + 1 : 1
-        } : {appid, name, developer, positive, negative, owners, price, userId, status: 0, version: 1};
+        } : {appid, name, developer, positive, negative, owners, price, userId, photo, location, status: 0, version: 1};
         _saveGame && _saveGame(editedGame, networkStatus.connected).then(() => history.goBack());
     };
 
@@ -96,6 +148,8 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
                 owners,
                 price,
                 userId,
+                photo,
+                location,
                 status: 0,
                 version: oldGame?.version + 1
             };
@@ -130,6 +184,8 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
             owners,
             price,
             userId,
+            photo,
+            location,
             status: 0,
             version: 0
         } : {
@@ -141,11 +197,15 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
             owners,
             price,
             userId,
+            photo,
+            location,
             status: 0,
             version: 0
         };
         _deleteGame?.(editedGame, networkStatus.connected).then(() => history.goBack());
     };
+
+    const [photoToDelete, setPhotoToDelete] = useState<Photo>();
 
     log('render');
     return (
@@ -164,7 +224,43 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
                 </IonToolbar>
             </IonHeader>
             <IonContent>
+                {photo && (<img onClick={() => setPhotoToDelete(photo)} src={photo.photo} height={'200px'}/>)}
+                {!photo && (
+                    <img src={'https://reactnativecode.com/wp-content/uploads/2018/02/Default_Image_Thumbnail.png'}
+                         height={'200px'}/>)}
+                <IonFab vertical="bottom" horizontal="center" slot="fixed">
+                    <IonFabButton onClick={() => takePhoto()}>
+                        <IonIcon icon={camera}/>
+                    </IonFabButton>
+                </IonFab>
+                <IonActionSheet
+                    isOpen={!!photoToDelete}
+                    buttons={[{
+                        text: 'Delete',
+                        role: 'destructive',
+                        icon: trash,
+                        handler: () => {
+                            if (photoToDelete) {
+                                deletePhoto();
+                                setPhotoToDelete(undefined);
+                            }
+                        }
+                    }, {
+                        text: 'Cancel',
+                        icon: close,
+                        role: 'cancel'
+                    }]}
+                    onDidDismiss={() => setPhotoToDelete(undefined)}
+                />
                 <IonList>
+                    <IonLabel position="floating">Location {location.lat} {location.lng}</IonLabel>
+                    <MyMap
+                        lat={location.lat}
+                        lng={location.lng}
+                        onMapClick={(e: any) => setLocation({lat: e.latLng.lat(), lng: e.latLng.lng()})}
+                        onMarkerClick={() => {
+                        }}
+                    />
                     <IonItem>
                         <IonLabel position="floating">Appid</IonLabel>
                         <IonInput type="number" value={appid}
@@ -200,8 +296,22 @@ const GameEdit: React.FC<GameEditProps> = ({history, match}) => {
                         </IonInput>
                     </IonItem>
                 </IonList>
-                {game1 && (
+                {game1 &&
+                ((game1.photo && (<img src={game1.photo.photo} height={'200px'}/>)) || (!game1.photo &&
+                    <img src={'https://reactnativecode.com/wp-content/uploads/2018/02/Default_Image_Thumbnail.png'}
+                         height={'200px'}/>)) &&
+                (
                     <IonList>
+                        <IonLabel
+                            position="floating">Location {game1.location ? game1.location.lat : 0} {game1.location ? game1.location.lng : 0}</IonLabel>
+                        <MyMap
+                            lat={game1.location ? game1.location.lat : 0}
+                            lng={game1.location ? game1.location.lng : 0}
+                            onMapClick={() => {
+                            }}
+                            onMarkerClick={() => {
+                            }}
+                        />
                         <IonItem>
                             <IonLabel>APPID: {game1.appid}</IonLabel>
                         </IonItem>

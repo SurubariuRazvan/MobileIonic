@@ -6,6 +6,9 @@ import {
     IonItemOption,
     IonItemOptions,
     IonItemSliding,
+    IonGrid,
+    IonRow,
+    IonCol,
 } from '@ionic/react';
 import {GameProps} from './GameProps';
 import Collapsible from "./Collapsible";
@@ -15,13 +18,40 @@ interface GamePropsExt extends GameProps {
     onDelete: (_id?: number) => void;
 }
 
-const Game: React.FC<GamePropsExt> = ({_id, appid, name, developer, positive, negative, owners, price, version, status, onEdit, onDelete}) => {
+const Game: React.FC<GamePropsExt> = ({
+                                          _id,
+                                          appid,
+                                          photo,
+    location,
+                                          name,
+                                          developer,
+                                          positive,
+                                          negative,
+                                          owners,
+                                          price,
+                                          version,
+                                          status,
+                                          onEdit,
+                                          onDelete
+                                      }) => {
     return (
         <IonItemSliding key={_id} id={String(_id)}>
             <IonItem>
                 <Collapsible>
                     <IonCardTitle>
-                        {name}
+                        <IonGrid>
+                            <IonRow>
+                                <IonCol>
+                                    {name}
+                                </IonCol>
+                                <IonCol size="auto">
+                                    {photo && (<img src={photo.photo} height={'100px'}/>)}
+                                    {!photo && (
+                                        <img src={'https://reactnativecode.com/wp-content/uploads/2018/02/Default_Image_Thumbnail.png'}
+                                             height={'100px'}/>)}
+                                </IonCol>
+                            </IonRow>
+                        </IonGrid>
                     </IonCardTitle>
                     <IonCardContent>
                         <div>appid: {appid}</div>
